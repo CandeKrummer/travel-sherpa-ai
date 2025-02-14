@@ -84,16 +84,26 @@ const checkpointer = new MemorySaver();
 
 const app = workflow.compile({ checkpointer });
 
+
 export async function runTravelPlanner(message: string | BaseMessageFields, threadId = "default_thread") {
+    const initialState = await app.getState({
+        configurable: { thread_id: threadId }
+    });
+    
+    const initialMessages = (initialState?.values?.messages || []) as BaseMessage[];
+    const initialMessageCount = initialMessages.length;
+    
     const finalState = await app.invoke(
         { messages: [new HumanMessage(message)] },
         { configurable: { thread_id: threadId } }
     );
 
-    const aiMessages = finalState.messages.filter((msg) => msg instanceof AIMessage);
+    const newAIMessages = finalState.messages
+        .slice(initialMessageCount)
+        .filter((msg) => msg instanceof AIMessage); 
 
     // devuelvo los mensajes concatenados generados por los agentes
-    const formattedResponse = aiMessages
+    const formattedResponse = newAIMessages
         .map((msg) => `${msg.content}`)
         .join("\n");
 
